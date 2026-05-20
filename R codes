@@ -1,0 +1,54 @@
+
+# load the packages
+#install.packages("tidyverse")
+#install.packages("modelsummary")
+library(tidyverse)
+library(data.table)
+library(modelsummary)
+library(dplyr)
+library(fixest)
+
+# paste the file directory here
+df  <- read.csv("/Users/ghazalayobi/Downloads/asec2021i.csv")
+df <- data.table(df)
+
+#a)
+# first method
+datasummary(sex * inlf ~ N + Percent(), data = filter(df, sex == "Female", married == "TRUE"))
+
+
+# second method
+df_female <- filter(df, sex == "Female", married == "TRUE")
+setDT( df_female )[ , 100 * .N / nrow( df_female ), by = inlf ]
+
+
+#b) 
+
+# first method
+datasummary(sex * inlf ~ N + Percent(), data = filter(df, sex == "Male", married == "TRUE"))
+
+
+# second method
+df_male <- filter(df, sex == "Male", married == "TRUE")
+setDT( df_male )[ , 100 * .N / nrow( df_male ), by = inlf ]
+
+
+#c)
+
+
+df <- df %>% 
+  mutate(log_inc = log(incwage + 1)) %>% 
+  mutate(exper2 = exper^2) %>% 
+  mutate(Black = as.numeric(race=="Black"),
+         Hispanic = as.numeric(race == "Hispanic"),
+         Asian = as.numeric(race == "Asian"),
+         Other = as.numeric(race != "Black" | race != "Hispanic" | race != "Asian"))
+
+df_female <- filter(df, sex == "Female", married == "TRUE")
+model <- lm(log_inc ~ educ + exper + exper2 + Black + Hispanic + Asian + Other, data = df_female)
+msummary(list(model),
+         fmt="%.4f",
+         gof_omit = 'DF|Deviance|Log.Lik.|F|R2 Adj.|AIC|BIC|R2 Pseudo|R2 Within|Std.Errors',
+         stars=c('*' = .05, '**' = .01),
+         title = ""
+)
